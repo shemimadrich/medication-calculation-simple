@@ -1,0 +1,174 @@
+<style>
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+  .container { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+  .warning { background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 20px; border: 1px solid #ffeeba; text-align: center; font-weight: bold; }
+  .card { background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 8px solid #007bff; line-height: 1.6; font-size: 1.1rem; }
+  .step { background: #ffffff; padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 2px solid #e9ecef; transition: all 0.3s; }
+  .step-active { border-color: #007bff; box-shadow: 0 4px 12px rgba(0,123,255,0.15); }
+  .step-locked { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
+  
+  label { display: block; font-weight: bold; margin-bottom: 10px; color: #2c3e50; font-size: 1rem; }
+  input[type=number] { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; margin-bottom: 10px; background-color: white !important; color: #212529 !important; }
+  
+  /* Syringe Visualizer */
+  .syringe-box { margin: 15px 0; background: #eee; height: 50px; border: 3px solid #495057; border-radius: 5px 30px 30px 5px; position: relative; overflow: hidden; }
+  #liquidFill { background: rgba(0, 123, 255, 0.7); height: 100%; width: 0%; border-right: 4px solid #0056b3; transition: width 0.1s; }
+  .counter { position: absolute; width: 100%; top: 12px; text-align: center; font-weight: bold; font-family: monospace; font-size: 1.1rem; color: #222; pointer-events: none; }
+
+  .flex-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+
+  button { width: 100%; padding: 14px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 5px; }
+  .btn-check { background: #28a745; }
+  .btn-next { background: #6c757d; margin-top: 15px; }
+  .feedback { margin-top: 10px; font-weight: bold; display: none; padding: 10px; border-radius: 6px; text-align: center; font-size: 0.95rem; }
+</style>
+
+<div class="container">
+  <div class="warning">
+    ⚠️ EDUCATIONAL PRACTICE ONLY<br>
+    <small style="font-weight: 400;">ALL DOSES AND SCENARIOS ARE FICTIONAL FOR TRAINING PURPOSES.</small>
+  </div>
+  
+  <div id="scenario" class="card">Loading case...</div>
+
+  <!-- STEP 1: CALCULATE -->
+  <div id="step1" class="step step-active">
+    <label>Step 1: Calculate Required Dose (mg)</label>
+    <input type="number" id="userMg" step="any" placeholder="Enter mg dose">
+    <button class="btn-check" onclick="checkStep1()">Verify Dose</button>
+    <div id="f1" class="feedback"></div>
+  </div>
+
+  <!-- STEP 2: DRAW -->
+  <div id="step2" class="step step-locked">
+    <label>Step 2: Draw from Raw Ampule (ml)</label>
+    <div class="flex-row">
+      <input type="range" id="drawSlider" min="0" max="20" step="0.01" value="0" style="flex-grow: 1;" oninput="syncInput(this.value, 'text')">
+      <input type="number" id="drawText" min="0" step="0.01" value="0" style="width: 100px; margin-bottom: 0;" oninput="syncInput(this.value, 'slider')">
+      <span style="font-weight:bold">ml</span>
+    </div>
+    <div class="syringe-box">
+      <div id="liquidFill"></div>
+      <div class="counter">
+        <span id="liveMg">0.00</span> mg / <span id="liveMl">0.00</span> ml
+      </div>
+    </div>
+    <button class="btn-check" onclick="checkStep2()">Verify Draw</button>
+    <div id="f2" class="feedback"></div>
+  </div>
+
+  <!-- STEP 3: INVENTORY -->
+  <div id="step3" class="step step-locked">
+    <label>Step 3: Total Ampules Used (Whole Number)</label>
+    <input type="number" id="userAmps" placeholder="Count ampules opened">
+    <button class="btn-check" onclick="checkStep3()">Verify Inventory</button>
+    <div id="f3" class="feedback"></div>
+  </div>
+
+  <button class="btn-next" onclick="generateScenario()">Next Patient Case</button>
+</div>
+
+<script>
+  const medications = [
+    { name: "Adenosine", adult: "6mg", child: "0.2mg/kg", conc: 3, vol: 2 },
+    { name: "Adrenaline - CPR", adult: "1mg", child: "0.01mg/kg", conc: 1, vol: 1 },
+    { name: "Etomidate - sedation", adult: "0.3mg/kg", child: "0.3mg/kg", conc: 2, vol: 10 },
+    { name: "Aerovent", adult: "0.5mg", child: "0.25mg", conc: 0.25, vol: 20 },
+    { name: "Tranexamic acid", adult: "1000mg", child: "15mg/kg", conc: 50, vol: 10 },
+    { name: "Furosemide", adult: "1mg/kg", child: "1mg/kg", conc: 10, vol: 2 },
+    { name: "Ketamine - sedation", adult: "3mg/kg", child: "3mg/kg", conc: 50, vol: 10 },
+    { name: "Ketamine - analgesia", adult: "0.4mg/kg", child: "0.4mg/kg", conc: 50, vol: 10 }
+  ];
+
+  let state = { targetMg: 0, currentMed: {}, targetMl: 0, targetAmps: 0, sliderMax: 20 };
+
+  window.generateScenario = function() {
+    const med = medications[Math.floor(Math.random() * medications.length)];
+    const isAdult = Math.random() > 0.5;
+    const weight = isAdult ? Math.floor(Math.random() * 51) + 50 : Math.floor(Math.random() * 13) + 3;
+    const protocol = isAdult ? med.adult : med.child;
+    
+    state.currentMed = med;
+    state.targetMg = protocol.includes("/kg") ? parseFloat(protocol) * weight : parseFloat(protocol);
+    state.targetMl = state.targetMg / med.conc;
+    state.targetAmps = Math.ceil(state.targetMl / med.vol);
+    
+    state.sliderMax = Math.max(state.targetMl * 1.5, med.vol);
+    const slider = document.getElementById('drawSlider');
+    slider.max = state.sliderMax.toFixed(2);
+    slider.step = (state.sliderMax / 200).toFixed(4);
+
+    document.getElementById('scenario').innerHTML = `
+      <strong>Patient:</strong> ${isAdult ? "Adult" : "Child"} (${weight}kg)<br>
+      <strong>Medication:</strong> <span style="color:#007bff; font-weight:bold;">${med.name}</span><br>
+      <strong>Protocol:</strong> ${protocol}<br>
+      <strong>Supplied:</strong> ${med.conc}mg/ml (${med.vol}ml ampule)
+    `;
+
+    document.querySelectorAll('.feedback').forEach(f => { f.style.display = 'none'; });
+    document.querySelectorAll('.step').forEach(s => s.className = 'step step-locked');
+    document.getElementById('step1').className = 'step step-active';
+    document.getElementById('userMg').value = '';
+    document.getElementById('userAmps').value = '';
+    document.getElementById('drawSlider').value = 0;
+    document.getElementById('drawText').value = 0;
+    updateSyringe(0);
+  };
+
+  window.syncInput = function(val, target) {
+    val = parseFloat(val) || 0;
+    if (target === 'text') document.getElementById('drawText').value = val;
+    if (target === 'slider') document.getElementById('drawSlider').value = val;
+    updateSyringe(val);
+  };
+
+  function updateSyringe(ml) {
+    const mg = ml * state.currentMed.conc;
+    document.getElementById('liveMg').innerText = mg.toFixed(2);
+    document.getElementById('liveMl').innerText = ml.toFixed(2);
+    document.getElementById('liquidFill').style.width = Math.min((ml / state.sliderMax * 100), 100) + "%";
+  }
+
+  window.checkStep1 = function() {
+    const val = parseFloat(document.getElementById('userMg').value);
+    const f = document.getElementById('f1');
+    f.style.display = 'block';
+    if (Math.abs(val - state.targetMg) < 0.01) {
+      f.innerHTML = "✅ Correct Dose!";
+      f.style.color = "#155724"; f.style.backgroundColor = "#d4edda";
+      document.getElementById('step2').className = 'step step-active';
+    } else {
+      f.innerHTML = `❌ Calculation error.`;
+      f.style.color = "#721c24"; f.style.backgroundColor = "#f8d7da";
+    }
+  };
+
+  window.checkStep2 = function() {
+    const ml = parseFloat(document.getElementById('drawSlider').value);
+    const f = document.getElementById('f2');
+    f.style.display = 'block';
+    if (Math.abs(ml - state.targetMl) < 0.02) {
+      f.innerHTML = "✅ Correct Draw!";
+      f.style.color = "#155724"; f.style.backgroundColor = "#d4edda";
+      document.getElementById('step3').className = 'step step-active';
+    } else {
+      f.innerHTML = `❌ Incorrect volume for target mg.`;
+      f.style.color = "#721c24"; f.style.backgroundColor = "#f8d7da";
+    }
+  };
+
+  window.checkStep3 = function() {
+    const val = parseInt(document.getElementById('userAmps').value);
+    const f = document.getElementById('f3');
+    f.style.display = 'block';
+    if (val === state.targetAmps) {
+      f.innerHTML = "✅ Correct Inventory!";
+      f.style.color = "#155724"; f.style.backgroundColor = "#d4edda";
+    } else {
+      f.innerHTML = `❌ Wrong ampule count.`;
+      f.style.color = "#721c24"; f.style.backgroundColor = "#f8d7da";
+    }
+  };
+
+  generateScenario();
+</script>
