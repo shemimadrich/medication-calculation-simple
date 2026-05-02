@@ -1,8 +1,8 @@
 <style>
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-  .container { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-  .warning { background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 20px; border: 1px solid #ffeeba; text-align: center; font-weight: bold; }
-  .card { background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 8px solid #007bff; line-height: 1.6; font-size: 1.1rem; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
+  .container { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+  .warning { background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 20px; border: 2px solid #ffeeba; text-align: center; font-weight: bold; }
+  .card { background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 8px solid #007bff; line-height: 1.6; font-size: 1.1rem; color: #212529; }
   .step { background: #ffffff; padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 2px solid #e9ecef; transition: all 0.3s; }
   .step-active { border-color: #007bff; box-shadow: 0 4px 12px rgba(0,123,255,0.15); }
   .step-locked { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
@@ -11,27 +11,31 @@
   input[type=number] { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; margin-bottom: 10px; background-color: white !important; color: #212529 !important; }
   
   /* Syringe Visualizer */
-  .syringe-box { margin: 15px 0; background: #eee; height: 50px; border: 3px solid #495057; border-radius: 5px 30px 30px 5px; position: relative; overflow: hidden; }
-  #liquidFill { background: rgba(0, 123, 255, 0.7); height: 100%; width: 0%; border-right: 4px solid #0056b3; transition: width 0.1s; }
-  .counter { position: absolute; width: 100%; top: 12px; text-align: center; font-weight: bold; font-family: monospace; font-size: 1.1rem; color: #222; pointer-events: none; }
+  .syringe-box { margin: 15px 0; background: #eee; height: 55px; border: 3px solid #495057; border-radius: 5px 30px 30px 5px; position: relative; overflow: hidden; display: flex; align-items: center; }
+  #liquidFill { background: #007bff; height: 100%; width: 0%; border-right: 3px solid #0056b3; transition: width 0.2s ease; position: absolute; left: 0; top: 0; z-index: 1; }
+  .counter { position: relative; width: 100%; text-align: center; font-weight: bold; font-family: monospace; font-size: 1.1rem; z-index: 2; transition: color 0.3s; }
 
-  .flex-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+  .flex-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .nudge-btn { background: #e9ecef; color: #495057; border: 1px solid #ced4da; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: auto; margin: 0; flex-shrink: 0; }
+  .nudge-btn:hover { background: #dee2e6; }
 
   button { width: 100%; padding: 14px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 5px; }
   .btn-check { background: #28a745; }
+  .btn-check:hover { background: #218838; }
   .btn-next { background: #6c757d; margin-top: 15px; }
   .feedback { margin-top: 10px; font-weight: bold; display: none; padding: 10px; border-radius: 6px; text-align: center; font-size: 0.95rem; }
+
+  footer { text-align: center; font-size: 0.85rem; color: #666; margin-top: 25px; border-top: 1px solid #eee; padding-top: 15px; line-height: 1.4; }
 </style>
 
 <div class="container">
   <div class="warning">
     ⚠️ EDUCATIONAL PRACTICE ONLY<br>
-    <small style="font-weight: 400;">ALL DOSES AND SCENARIOS ARE FICTIONAL FOR TRAINING PURPOSES.</small>
+    <small style="font-weight: 400;">ALL DOSES AND SCENARIOS ARE FICTIONAL AND FOR TRAINING PURPOSES ONLY.</small>
   </div>
   
-  <div id="scenario" class="card">Loading case...</div>
+  <div id="scenario" class="card">Loading patient case...</div>
 
-  <!-- STEP 1: CALCULATE -->
   <div id="step1" class="step step-active">
     <label>Step 1: Calculate Required Dose (mg)</label>
     <input type="number" id="userMg" step="any" placeholder="Enter mg dose">
@@ -39,13 +43,16 @@
     <div id="f1" class="feedback"></div>
   </div>
 
-  <!-- STEP 2: DRAW -->
   <div id="step2" class="step step-locked">
     <label>Step 2: Draw from Raw Ampule (ml)</label>
     <div class="flex-row">
-      <input type="range" id="drawSlider" min="0" max="20" step="0.01" value="0" style="flex-grow: 1;" oninput="syncInput(this.value, 'text')">
-      <input type="number" id="drawText" min="0" step="0.01" value="0" style="width: 100px; margin-bottom: 0;" oninput="syncInput(this.value, 'slider')">
-      <span style="font-weight:bold">ml</span>
+      <input type="range" id="drawSlider" min="0" value="0" style="flex-grow: 1;" oninput="syncInput(this.value, 'text')">
+    </div>
+    <div class="flex-row">
+      <button class="nudge-btn" onclick="nudge(-0.01)">−</button>
+      <input type="number" id="drawText" min="0" step="0.01" value="0" style="text-align: center;" oninput="syncInput(this.value, 'slider')">
+      <button class="nudge-btn" onclick="nudge(0.01)">+</button>
+      <span style="font-weight:bold; min-width: 25px;">ml</span>
     </div>
     <div class="syringe-box">
       <div id="liquidFill"></div>
@@ -57,7 +64,6 @@
     <div id="f2" class="feedback"></div>
   </div>
 
-  <!-- STEP 3: INVENTORY -->
   <div id="step3" class="step step-locked">
     <label>Step 3: Total Ampules Used (Whole Number)</label>
     <input type="number" id="userAmps" placeholder="Count ampules opened">
@@ -66,6 +72,12 @@
   </div>
 
   <button class="btn-next" onclick="generateScenario()">Next Patient Case</button>
+
+  <footer>
+    This game was built in 10 minutes by <strong>Shemi Waldman</strong>.<br>
+    If there are any suggestions or mistakes, please contact me at<br>
+    <a href="mailto:wshemi120@gmail.com" style="color: #007bff; text-decoration: none;">wshemi120@gmail.com</a>
+  </footer>
 </div>
 
 <script>
@@ -96,7 +108,8 @@
     state.sliderMax = Math.max(state.targetMl * 1.5, med.vol);
     const slider = document.getElementById('drawSlider');
     slider.max = state.sliderMax.toFixed(2);
-    slider.step = (state.sliderMax / 200).toFixed(4);
+    // Increase sensitivity for smaller doses
+    slider.step = (state.targetMl < 2) ? "0.005" : "0.01";
 
     document.getElementById('scenario').innerHTML = `
       <strong>Patient:</strong> ${isAdult ? "Adult" : "Child"} (${weight}kg)<br>
@@ -117,16 +130,26 @@
 
   window.syncInput = function(val, target) {
     val = parseFloat(val) || 0;
-    if (target === 'text') document.getElementById('drawText').value = val;
+    if (target === 'text') document.getElementById('drawText').value = val.toFixed(2);
     if (target === 'slider') document.getElementById('drawSlider').value = val;
     updateSyringe(val);
+  };
+
+  window.nudge = function(amount) {
+    const current = parseFloat(document.getElementById('drawText').value) || 0;
+    const next = Math.max(0, current + amount);
+    syncInput(next, 'slider');
+    document.getElementById('drawText').value = next.toFixed(2);
   };
 
   function updateSyringe(ml) {
     const mg = ml * state.currentMed.conc;
     document.getElementById('liveMg').innerText = mg.toFixed(2);
     document.getElementById('liveMl').innerText = ml.toFixed(2);
-    document.getElementById('liquidFill').style.width = Math.min((ml / state.sliderMax * 100), 100) + "%";
+    
+    const fillPercent = Math.min((ml / state.sliderMax * 100), 100);
+    document.getElementById('liquidFill').style.width = fillPercent + "%";
+    document.querySelector('.counter').style.color = fillPercent > 50 ? "white" : "#222";
   }
 
   window.checkStep1 = function() {
@@ -138,7 +161,7 @@
       f.style.color = "#155724"; f.style.backgroundColor = "#d4edda";
       document.getElementById('step2').className = 'step step-active';
     } else {
-      f.innerHTML = `❌ Calculation error.`;
+      f.innerHTML = "❌ Calculation Error.";
       f.style.color = "#721c24"; f.style.backgroundColor = "#f8d7da";
     }
   };
@@ -147,12 +170,17 @@
     const ml = parseFloat(document.getElementById('drawSlider').value);
     const f = document.getElementById('f2');
     f.style.display = 'block';
-    if (Math.abs(ml - state.targetMl) < 0.02) {
+    
+    // Robust comparison to fix floating point math errors
+    const roundedInput = Math.round(ml * 100) / 100;
+    const roundedTarget = Math.round(state.targetMl * 100) / 100;
+
+    if (Math.abs(roundedInput - roundedTarget) < 0.01) {
       f.innerHTML = "✅ Correct Draw!";
       f.style.color = "#155724"; f.style.backgroundColor = "#d4edda";
       document.getElementById('step3').className = 'step step-active';
     } else {
-      f.innerHTML = `❌ Incorrect volume for target mg.`;
+      f.innerHTML = `❌ Incorrect volume. Goal: ${state.targetMg.toFixed(2)}mg requires ${state.targetMl.toFixed(2)}ml.`;
       f.style.color = "#721c24"; f.style.backgroundColor = "#f8d7da";
     }
   };
@@ -165,7 +193,7 @@
       f.innerHTML = "✅ Correct Inventory!";
       f.style.color = "#155724"; f.style.backgroundColor = "#d4edda";
     } else {
-      f.innerHTML = `❌ Wrong ampule count.`;
+      f.innerHTML = `❌ Wrong count. You should have cracked ${state.targetAmps} ampule(s).`;
       f.style.color = "#721c24"; f.style.backgroundColor = "#f8d7da";
     }
   };
