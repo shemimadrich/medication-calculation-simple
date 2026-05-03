@@ -97,7 +97,7 @@
   window.generateScenario = function() {
     const med = medications[Math.floor(Math.random() * medications.length)];
     const isAdult = Math.random() > 0.5;
-    const weight = isAdult ? Math.floor(Math.random() * 51) + 50 : Math.floor(Math.random() * 13) + 3;
+    const weight = isAdult ? Math.floor(Math.random() * 51) + 50 : Math.floor(Math.random() * 13) + 8;
     const protocol = isAdult ? med.adult : med.child;
     
     state.currentMed = med;
